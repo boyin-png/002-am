@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'src/core/theme/app_theme.dart';
 import 'src/features/auth/presentation/screens/login_screen.dart';
 
 void main() {
@@ -12,16 +13,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Color(0XFF0E1534)),
-        useMaterial3: true,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        appBarTheme: AppBarTheme(
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          centerTitle: true,
-        ),
-      ),
+      // Aplicando el tema centralizado a toda la aplicación.
+      theme: AppTheme.getTheme(),
       home: const LoginScreen(),
     );
   }

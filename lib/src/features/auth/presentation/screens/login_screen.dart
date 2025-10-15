@@ -1,10 +1,10 @@
-// In lib/src/features/auth/presentation/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:proyecto002/src/core/theme/app_theme.dart';
 import '../../application/login_cubit.dart';
 import '../../application/login_state.dart';
-
-// Importa los otros archivos que crearás a continuación
+import 'package:proyecto002/src/features/auth/presentation/widgets/custom_text_form_field.dart';
+import 'package:confetti/confetti.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -30,108 +30,189 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-  // Estado local para la visibilidad de la contraseña
-  bool _isPasswordObscured = true;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  late FocusNode _emailFocusNode;
+  late FocusNode _passwordFocusNode;
+  late ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailFocusNode = FocusNode();
+    _passwordFocusNode = FocusNode();
+    // Aseguramos que el controlador de confeti se inicialice aquí
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  void _submitForm() {
+    FocusScope.of(context).unfocus();
+    if (_formKey.currentState!.validate()) {
+      context.read<LoginCubit>().login(
+        _emailController.text,
+        _passwordController.text,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          // Inside the Column's children list
-          SizedBox(
-            height: 300,
-            width: 300,
-            child: Image.asset('assets/images/logo_app.png'),
-          ),
-          // Dentro del Column en _LoginFormState debajo del SizedBox
-          Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                // Campos de texto y otros widgets irán aquí
+    return BlocListener<LoginCubit, LoginState>(
+      listener: (context, state) {
+        if (state is LoginSuccess) {
+          _confettiController.play();
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('¡Inicio de sesión exitoso!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          _emailController.clear();
+          _passwordController.clear();
+        } else if (state is LoginFailure) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Error de inicio de sesión'),
+              content: Text(state.error),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
               ],
             ),
-          ),
-          // Dentro del Column en _LoginFormState
-          TextFormField(
-            decoration: const InputDecoration(
-              labelText: 'Email Address',
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) {
-              if (value == null || !value.contains('@')) {
-                return 'Please enter a valid email';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          // Después del SizedBox
-          TextFormField(
-            // El estado local controla si el texto se oculta
-            obscureText: _isPasswordObscured,
-            decoration: InputDecoration(
-              labelText: 'Password',
-              border: const OutlineInputBorder(),
-              // El ícono para mostrar/ocultar la contraseña
-              suffixIcon: IconButton(
-                icon: Icon(
-                  // Cambia el ícono basado en el estado local
-                  _isPasswordObscured ? Icons.visibility_off : Icons.visibility,
-                ),
-                onPressed: () {
-                  // Llama a setState para reconstruir el widget con el nuevo estado
-                  setState(() {
-                    _isPasswordObscured = !_isPasswordObscured;
-                  });
-                },
+          );
+        }
+      },
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.medium),
+              child: Column(
+                children: [
+                  Image.asset('assets/images/logo_app.png'),
+                  const SizedBox(height: AppSpacing.large),
+                  Form(
+                    key: _formKey,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        CustomTextFormField(
+                          controller: _emailController,
+                          focusNode: _emailFocusNode,
+                          labelText: 'Email Address',
+                          textInputAction: TextInputAction.next,
+                          onFieldSubmitted: (_) {
+                            FocusScope.of(
+                              context,
+                            ).requestFocus(_passwordFocusNode);
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            final emailRegex = RegExp(
+                              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                            );
+                            if (!emailRegex.hasMatch(value)) {
+                              return 'Please enter a valid email';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.medium),
+                        CustomTextFormField(
+                          controller: _passwordController,
+                          focusNode: _passwordFocusNode,
+                          labelText: 'Password',
+                          isPassword: true,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) => _submitForm(),
+                          validator: (value) {
+                            if (value == null || value.length < 6) {
+                              return 'Password must be at least 6 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.medium),
+                        BlocBuilder<LoginCubit, LoginState>(
+                          buildWhen: (previous, current) =>
+                              current is LoginInitial,
+                          builder: (context, state) {
+                            final isChecked = state is LoginInitial
+                                ? state.isRememberMeChecked
+                                : false;
+                            return CheckboxListTile(
+                              title: const Text('Remember Me'),
+                              value: isChecked,
+                              onChanged: (newValue) {
+                                context.read<LoginCubit>().toggleRememberMe(
+                                  newValue ?? false,
+                                );
+                              },
+                              controlAffinity: ListTileControlAffinity.leading,
+                              contentPadding: EdgeInsets.zero,
+                            );
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.large),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: BlocBuilder<LoginCubit, LoginState>(
+                            builder: (context, state) {
+                              if (state is LoginLoading) {
+                                return const KeyedSubtree(
+                                  key: ValueKey('loading'),
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+                              return KeyedSubtree(
+                                key: const ValueKey('button'),
+                                child: ElevatedButton(
+                                  onPressed: _submitForm,
+                                  child: const Text('Login'),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            validator: (value) {
-              if (value == null || value.length < 6) {
-                return 'Password must be at least 6 characters';
-              }
-              return null;
-            },
           ),
-          const SizedBox(height: 16), // Después del TextFormField de contraseña
-          BlocBuilder<LoginCubit, LoginState>(
-            builder: (context, state) {
-              return CheckboxListTile(
-                title: const Text('Remember Me'),
-                // El valor viene del estado del Cubit
-                value: state.isRememberMeChecked,
-                onChanged: (newValue) {
-                  // Llama al método del Cubit para actualizar el estado
-                  context.read<LoginCubit>().toggleRememberMe(
-                    newValue ?? false,
-                  );
-                },
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          // Al final del Column
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              shape: StadiumBorder(),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            ),
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Processing Data...')),
-                );
-              }
-            },
-            child: const Text('Login'),
+          ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            shouldLoop: false,
+            colors: const [
+              Colors.green,
+              Colors.blue,
+              Colors.pink,
+              Colors.orange,
+              Colors.purple,
+            ],
           ),
         ],
       ),

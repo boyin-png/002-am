@@ -1,12 +1,24 @@
-// In lib/src/features/auth/application/login_state.dart
-class LoginState {
+// lib/src/features/auth/application/login_state.dart
+abstract class LoginState {}
+
+class LoginInitial extends LoginState {
   final bool isRememberMeChecked;
 
-  const LoginState({this.isRememberMeChecked = false});
+  LoginInitial({this.isRememberMeChecked = false});
 
-  LoginState copyWith({bool? isRememberMeChecked}) {
-    return LoginState(
+  LoginInitial copyWith({bool? isRememberMeChecked}) {
+    return LoginInitial(
       isRememberMeChecked: isRememberMeChecked ?? this.isRememberMeChecked,
     );
   }
+}
+
+class LoginLoading extends LoginState {}
+
+class LoginSuccess extends LoginState {}
+
+class LoginFailure extends LoginState {
+  final String error;
+
+  LoginFailure({required this.error});
 }
