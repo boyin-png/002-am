@@ -1,0 +1,11 @@
+// In lib/src/features/auth/application/login_cubit.dart
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'login_state.dart';
+
+class LoginCubit extends Cubit<LoginState> {
+  LoginCubit() : super(const LoginState());
+
+  void toggleRememberMe(bool newValue) {
+    emit(state.copyWith(isRememberMeChecked: newValue));
+  }
+}
